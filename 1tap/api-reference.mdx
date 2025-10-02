@@ -1,0 +1,498 @@
+---
+title: "API Reference"
+description: "Complete API documentation for 1tap.video integration"
+---
+
+## Overview
+
+The 1tap.video API allows you to integrate video recording, editing, and sharing capabilities into your applications. Our RESTful API provides endpoints for managing videos, users, and analytics.
+
+## Authentication
+
+All API requests require authentication using an API key. Include your API key in the request header:
+
+```http
+Authorization: Bearer YOUR_API_KEY
+```
+
+<Warning>
+Keep your API key secure and never expose it in client-side code. Use environment variables to store your API key.
+</Warning>
+
+## Base URL
+
+All API endpoints are relative to the base URL:
+
+```
+https://api.1tap.video/v1
+```
+
+## Rate Limits
+
+API requests are rate limited to ensure fair usage:
+
+- **Free Plan**: 100 requests per hour
+- **Pro Plan**: 1,000 requests per hour
+- **Enterprise**: Custom limits
+
+Rate limit headers are included in all responses:
+
+```http
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640995200
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes and returns error details in JSON format:
+
+```json
+{
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "The request is missing required parameters",
+    "details": {
+      "field": "title",
+      "reason": "required"
+    }
+  }
+}
+```
+
+## Videos
+
+### Create Video
+
+Create a new video recording session.
+
+<ParamField path="POST /videos" body="application/json">
+  <Param name="title" type="string" required>
+    Title of the video
+  </Param>
+  <Param name="description" type="string">
+    Optional description
+  </Param>
+  <Param name="settings" type="object">
+    Recording settings
+    <Param name="resolution" type="string" default="1080p">
+      Recording resolution (720p, 1080p, 4K)
+    </Param>
+    <Param name="fps" type="integer" default="30">
+      Frame rate (30, 60, 120)
+    </Param>
+    <Param name="audio" type="boolean" default="true">
+      Include audio recording
+    </Param>
+  </Param>
+</ParamField>
+
+<ResponseField name="201">
+  <Param name="id" type="string">
+    Unique video identifier
+  </Param>
+  <Param name="title" type="string">
+    Video title
+  </Param>
+  <Param name="status" type="string">
+    Recording status (pending, recording, completed, failed)
+  </Param>
+  <Param name="created_at" type="string">
+    ISO 8601 timestamp
+  </Param>
+  <Param name="recording_url" type="string">
+    URL for starting the recording
+  </Param>
+</ResponseField>
+
+### Get Video
+
+Retrieve video details and metadata.
+
+<ParamField path="GET /videos/{id}">
+  <Param name="id" type="string" required>
+    Video identifier
+  </Param>
+</ParamField>
+
+<ResponseField name="200">
+  <Param name="id" type="string">
+    Video identifier
+  </Param>
+  <Param name="title" type="string">
+    Video title
+  </Param>
+  <Param name="description" type="string">
+    Video description
+  </Param>
+  <Param name="status" type="string">
+    Current status
+  </Param>
+  <Param name="duration" type="integer">
+    Video duration in seconds
+  </Param>
+  <Param name="file_size" type="integer">
+    File size in bytes
+  </Param>
+  <Param name="resolution" type="string">
+    Video resolution
+  </Param>
+  <Param name="created_at" type="string">
+    Creation timestamp
+  </Param>
+  <Param name="updated_at" type="string">
+    Last update timestamp
+  </Param>
+  <Param name="urls" type="object">
+    Video URLs
+    <Param name="stream" type="string">
+      Streaming URL
+    </Param>
+    <Param name="download" type="string">
+      Download URL
+    </Param>
+    <Param name="thumbnail" type="string">
+      Thumbnail URL
+    </Param>
+  </Param>
+</ResponseField>
+
+### List Videos
+
+Get a paginated list of videos.
+
+<ParamField path="GET /videos">
+  <Param name="page" type="integer" default="1">
+    Page number
+  </Param>
+  <Param name="limit" type="integer" default="20">
+    Items per page (max 100)
+  </Param>
+  <Param name="status" type="string">
+    Filter by status
+  </Param>
+  <Param name="sort" type="string" default="created_at">
+    Sort field (created_at, updated_at, title)
+  </Param>
+  <Param name="order" type="string" default="desc">
+    Sort order (asc, desc)
+  </Param>
+</ParamField>
+
+<ResponseField name="200">
+  <Param name="videos" type="array">
+    Array of video objects
+  </Param>
+  <Param name="pagination" type="object">
+    Pagination information
+    <Param name="page" type="integer">
+      Current page
+    </Param>
+    <Param name="limit" type="integer">
+      Items per page
+    </Param>
+    <Param name="total" type="integer">
+      Total items
+    </Param>
+    <Param name="pages" type="integer">
+      Total pages
+    </Param>
+  </Param>
+</ResponseField>
+
+### Update Video
+
+Update video metadata.
+
+<ParamField path="PUT /videos/{id}" body="application/json">
+  <Param name="id" type="string" required>
+    Video identifier
+  </Param>
+  <Param name="title" type="string">
+    New title
+  </Param>
+  <Param name="description" type="string">
+    New description
+  </Param>
+  <Param name="tags" type="array">
+    Array of tag strings
+  </Param>
+</ParamField>
+
+### Delete Video
+
+Permanently delete a video.
+
+<ParamField path="DELETE /videos/{id}">
+  <Param name="id" type="string" required>
+    Video identifier
+  </Param>
+</ParamField>
+
+<ResponseField name="204">
+  No content - video deleted successfully
+</ResponseField>
+
+## Sharing
+
+### Create Share Link
+
+Generate a shareable link for a video.
+
+<ParamField path="POST /videos/{id}/shares" body="application/json">
+  <Param name="id" type="string" required>
+    Video identifier
+  </Param>
+  <Param name="expires_at" type="string">
+    Expiration date (ISO 8601)
+  </Param>
+  <Param name="password" type="string">
+    Password protection
+  </Param>
+  <Param name="allow_download" type="boolean" default="false">
+    Allow downloads
+  </Param>
+  <Param name="max_views" type="integer">
+    Maximum view count
+  </Param>
+</ParamField>
+
+<ResponseField name="201">
+  <Param name="id" type="string">
+    Share link identifier
+  </Param>
+  <Param name="url" type="string">
+    Shareable URL
+  </Param>
+  <Param name="expires_at" type="string">
+    Expiration timestamp
+  </Param>
+  <Param name="view_count" type="integer">
+    Current view count
+  </Param>
+  <Param name="created_at" type="string">
+    Creation timestamp
+  </Param>
+</ResponseField>
+
+### Get Share Analytics
+
+Retrieve analytics for a share link.
+
+<ParamField path="GET /shares/{id}/analytics">
+  <Param name="id" type="string" required>
+    Share link identifier
+  </Param>
+  <Param name="start_date" type="string">
+    Start date for analytics (ISO 8601)
+  </Param>
+  <Param name="end_date" type="string">
+    End date for analytics (ISO 8601)
+  </Param>
+</ParamField>
+
+<ResponseField name="200">
+  <Param name="views" type="integer">
+    Total views
+  </Param>
+  <Param name="unique_viewers" type="integer">
+    Unique viewers
+  </Param>
+  <Param name="average_watch_time" type="integer">
+    Average watch time in seconds
+  </Param>
+  <Param name="geographic_data" type="array">
+    Views by country
+  </Param>
+  <Param name="device_data" type="object">
+    Views by device type
+  </Param>
+  <Param name="referrer_data" type="array">
+    Views by referrer
+  </Param>
+</ResponseField>
+
+## Webhooks
+
+Configure webhooks to receive real-time notifications about video events.
+
+### Create Webhook
+
+<ParamField path="POST /webhooks" body="application/json">
+  <Param name="url" type="string" required>
+    Webhook endpoint URL
+  </Param>
+  <Param name="events" type="array" required>
+    Array of event types to subscribe to
+  </Param>
+  <Param name="secret" type="string">
+    Webhook secret for signature verification
+  </Param>
+</ParamField>
+
+### Supported Events
+
+- `video.created` - Video recording started
+- `video.completed` - Video processing completed
+- `video.failed` - Video processing failed
+- `video.shared` - Video shared via link
+- `video.viewed` - Video viewed by someone
+
+### Webhook Payload
+
+```json
+{
+  "id": "evt_1234567890",
+  "type": "video.completed",
+  "created": "2023-01-01T12:00:00Z",
+  "data": {
+    "video": {
+      "id": "vid_1234567890",
+      "title": "My Video",
+      "status": "completed"
+    }
+  }
+}
+```
+
+## SDKs
+
+We provide official SDKs for popular programming languages:
+
+<CardGroup cols={2}>
+  <Card
+    title="JavaScript/Node.js"
+    icon="js"
+    href="https://github.com/1tap-video/js-sdk"
+  >
+    npm install @1tap-video/sdk
+  </Card>
+  <Card
+    title="Python"
+    icon="python"
+    href="https://github.com/1tap-video/python-sdk"
+  >
+    pip install 1tap-video
+  </Card>
+  <Card
+    title="PHP"
+    icon="php"
+    href="https://github.com/1tap-video/php-sdk"
+  >
+    composer require 1tap-video/sdk
+  </Card>
+  <Card
+    title="Go"
+    icon="go"
+    href="https://github.com/1tap-video/go-sdk"
+  >
+    go get github.com/1tap-video/go-sdk
+  </Card>
+</CardGroup>
+
+## Code Examples
+
+### JavaScript Example
+
+```javascript
+import { OneTapVideo } from '@1tap-video/sdk';
+
+const client = new OneTapVideo({
+  apiKey: process.env.ONETAP_API_KEY
+});
+
+// Create a new video
+const video = await client.videos.create({
+  title: 'My Tutorial',
+  description: 'A step-by-step guide',
+  settings: {
+    resolution: '1080p',
+    fps: 60,
+    audio: true
+  }
+});
+
+console.log('Video created:', video.id);
+
+// Start recording
+await client.videos.startRecording(video.id);
+
+// Stop recording after 30 seconds
+setTimeout(async () => {
+  await client.videos.stopRecording(video.id);
+  
+  // Create share link
+  const share = await client.shares.create(video.id, {
+    expires_at: '2024-12-31T23:59:59Z',
+    allow_download: true
+  });
+  
+  console.log('Share URL:', share.url);
+}, 30000);
+```
+
+### Python Example
+
+```python
+from onetap_video import OneTapVideo
+
+client = OneTapVideo(api_key='your_api_key')
+
+# Create a new video
+video = client.videos.create(
+    title='My Tutorial',
+    description='A step-by-step guide',
+    settings={
+        'resolution': '1080p',
+        'fps': 60,
+        'audio': True
+    }
+)
+
+print(f'Video created: {video.id}')
+
+# Start recording
+client.videos.start_recording(video.id)
+
+# Stop recording after 30 seconds
+import time
+time.sleep(30)
+client.videos.stop_recording(video.id)
+
+# Create share link
+share = client.shares.create(video.id, {
+    'expires_at': '2024-12-31T23:59:59Z',
+    'allow_download': True
+})
+
+print(f'Share URL: {share.url}')
+```
+
+## Testing
+
+Use our sandbox environment for testing:
+
+```
+https://sandbox-api.1tap.video/v1
+```
+
+<Note>
+Sandbox videos are automatically deleted after 24 hours and have limited functionality.
+</Note>
+
+## Support
+
+Need help with the API?
+
+- **Documentation**: Browse our comprehensive guides
+- **Community**: Join our [Discord server](https://discord.gg/1tap)
+- **Support**: Email us at api-support@1tap.video
+- **Status**: Check our [status page](https://status.1tap.video)
+
+<Card
+  title="API Status"
+  icon="chart-line"
+  href="https://status.1tap.video"
+>
+  Check API uptime and performance metrics
+</Card>
